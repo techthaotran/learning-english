@@ -1,22 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
 import dictionaryRouter from './routes/dictionary.js';
 import participantsRouter from './routes/participants.js';
 import translateRouter from './routes/translate.js';
 import { getDb } from './db.js';
 import { swaggerSpec } from './swagger.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
-
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
 
 getDb();
 
@@ -38,24 +28,28 @@ app.use('/api/dictionary', dictionaryRouter);
 app.use('/api/participants', participantsRouter);
 app.use('/api/translate', translateRouter);
 
-const server = app.listen(PORT, () => {
-  console.log(`API running at http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`API running at http://localhost:${PORT}`);
+  });
 
-server.on('error', (err: NodeJS.ErrnoException) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(
-      `Port ${PORT} đang được dùng. Chạy: pnpm predev rồi thử lại.`
-    );
-    process.exit(1);
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `Port ${PORT} đang được dùng. Chạy: pnpm predev rồi thử lại.`
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  function shutdown(): void {
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 1000).unref();
   }
-  throw err;
-});
 
-function shutdown(): void {
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(0), 1000).unref();
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+export default app;
