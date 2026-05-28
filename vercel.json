@@ -3,8 +3,13 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "node scripts/vercel-build-log.mjs",
   "outputDirectory": ".",
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs22.x"
+    }
+  },
   "routes": [
-    { "src": "/api", "dest": "backend/dist/index.js" },
-    { "src": "/api/(.*)", "dest": "backend/dist/index.js" }
+    { "src": "/api", "dest": "/api/index.js" },
+    { "src": "/api/(.*)", "dest": "/api/index.js" }
   ]
 }
