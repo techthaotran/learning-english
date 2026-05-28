@@ -3,7 +3,6 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "node scripts/vercel-build-log.mjs",
   "outputDirectory": ".",
-  "builds": [{ "src": "api/index.js", "use": "@vercel/node" }],
   "routes": [
     { "src": "/api", "dest": "/api/index.js" },
     { "src": "/api/(.*)", "dest": "/api/index.js" }
