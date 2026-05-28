@@ -1,10 +1,10 @@
-import { Router, type Request, type Response } from 'express';
+import { Router } from 'express';
 import { fetchWordFromGoogle } from '../lib/googleTranslate.js';
 
 const router = Router();
 
 /** Proxy Google translate_a/single — tránh CORS từ trình duyệt */
-router.get('/lookup', async (req: Request, res: Response) => {
+router.get('/lookup', async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q : '';
   if (!q.trim()) {
     res.status(400).json({ error: 'Tham số q không được để trống' });
