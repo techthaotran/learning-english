@@ -9,3 +9,4 @@ backend/data/
 .env.*
 !.env.example
 dev-dist/
+.vercel
