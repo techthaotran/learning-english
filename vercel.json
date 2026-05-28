@@ -1,7 +1,7 @@
 {
   "version": 2,
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm -C backend build",
+  "buildCommand": "node scripts/vercel-build-log.mjs",
   "rewrites": [
     { "source": "/api", "destination": "/backend/src/index.ts" },
     { "source": "/api/(.*)", "destination": "/backend/src/index.ts" }

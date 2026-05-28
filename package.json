@@ -14,6 +14,7 @@
     "start:api": "pnpm -C backend start",
     "vercel": "vercel",
     "deploy": "vercel",
+    "vercel:build": "vercel build",
     "deploy:prod": "vercel --prod"
   },
   "devDependencies": {
