@@ -1,0 +1,16 @@
+export {
+  WORD_STATUSES,
+  STATUS,
+  EXAMPLE_TEMPLATE,
+  statusBadgeClass,
+  isWordStatus,
+  type WordStatus,
+  type ExampleItem,
+  type DictionaryWord,
+  type PaginatedWords,
+  type ParticipantStats,
+  type DashboardResponse,
+  type FlashcardWord,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+} from '@learning-english/shared';

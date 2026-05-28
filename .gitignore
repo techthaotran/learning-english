@@ -1,0 +1,11 @@
+node_modules/
+package-lock.json
+npm-shrinkwrap.json
+dist/
+backend/data/
+*.db
+.DS_Store
+.env
+.env.*
+!.env.example
+dev-dist/

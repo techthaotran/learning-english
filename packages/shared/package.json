@@ -1,0 +1,9 @@
+{
+  "name": "@learning-english/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
