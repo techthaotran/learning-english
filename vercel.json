@@ -2,11 +2,6 @@
   "version": 2,
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm -C backend build",
-  "functions": {
-    "backend/src/index.ts": {
-      "runtime": "nodejs22.x"
-    }
-  },
   "rewrites": [
     { "source": "/api", "destination": "/backend/src/index.ts" },
     { "source": "/api/(.*)", "destination": "/backend/src/index.ts" }
