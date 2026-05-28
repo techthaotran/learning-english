@@ -1,10 +1,10 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type Response as ExpressResponse } from 'express';
 import { REVIEW_RESULTS } from '@learning-english/shared';
 import * as dictionaryService from '../services/dictionaryService.js';
 
 const router = Router();
 
-router.get('/', (req: Request, res: Response) => {
+router.get('/', (req: Request, res: ExpressResponse) => {
   const { q, status, page, pageSize } = req.query;
   try {
     const result = dictionaryService.listWords({
@@ -20,7 +20,7 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-router.post('/', (req: Request, res: Response) => {
+router.post('/', (req: Request, res: ExpressResponse) => {
   const { name, type, transcription, meaning, example } = req.body;
   if (!name?.trim()) {
     res.status(400).json({ error: 'Tên từ không được để trống' });
@@ -41,7 +41,7 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
-router.get('/search', (req: Request, res: Response) => {
+router.get('/search', (req: Request, res: ExpressResponse) => {
   const { q } = req.query;
   if (!q || typeof q !== 'string' || !q.trim()) {
     res.json([]);
@@ -56,7 +56,7 @@ router.get('/search', (req: Request, res: Response) => {
   }
 });
 
-router.get('/dashboard', (req: Request, res: Response) => {
+router.get('/dashboard', (req: Request, res: ExpressResponse) => {
   const userName =
     typeof req.query.userName === 'string' ? req.query.userName : undefined;
   try {
@@ -68,7 +68,7 @@ router.get('/dashboard', (req: Request, res: Response) => {
   }
 });
 
-router.get('/flashcards', (req: Request, res: Response) => {
+router.get('/flashcards', (req: Request, res: ExpressResponse) => {
   const userName =
     typeof req.query.userName === 'string' ? req.query.userName : 'guest';
   try {
@@ -80,7 +80,7 @@ router.get('/flashcards', (req: Request, res: Response) => {
   }
 });
 
-router.post('/flashcards/review', (req: Request, res: Response) => {
+router.post('/flashcards/review', (req: Request, res: ExpressResponse) => {
   const { dictionaryId, userName, result } = req.body;
   if (!dictionaryId || !result) {
     res.status(400).json({ error: 'Thiếu dictionaryId hoặc result' });
@@ -107,7 +107,7 @@ router.post('/flashcards/review', (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', (req: Request, res: ExpressResponse) => {
   try {
     const word = dictionaryService.getWordById(Number(req.params.id));
     if (!word) {
@@ -121,7 +121,7 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', (req: Request, res: ExpressResponse) => {
   const id = Number(req.params.id);
   try {
     const word = dictionaryService.updateWord(id, req.body);
@@ -136,7 +136,7 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', (req: Request, res: ExpressResponse) => {
   const id = Number(req.params.id);
   try {
     const deleted = dictionaryService.deleteWord(id);
