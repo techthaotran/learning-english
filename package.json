@@ -11,9 +11,13 @@
     "dev": "concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
     "build": "pnpm -C frontend build",
     "preview": "pnpm -C frontend preview",
-    "start:api": "pnpm -C backend start"
+    "start:api": "pnpm -C backend start",
+    "vercel": "vercel",
+    "deploy": "vercel",
+    "deploy:prod": "vercel --prod"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "vercel": "^54.5.1"
   }
 }
