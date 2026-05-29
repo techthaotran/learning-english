@@ -7,7 +7,18 @@ import type { DictionaryWord, ExampleItem } from './shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'learning.db');
-const DB_PATH = process.env.DB_PATH?.trim() || DEFAULT_DB_PATH;
+
+/** Vercel serverless only allows writes under /tmp (ephemeral per instance). */
+function resolveDbPath(): string {
+  const configured = process.env.DB_PATH?.trim();
+  if (process.env.VERCEL) {
+    const fileName = configured ? path.basename(configured) : path.basename(DEFAULT_DB_PATH);
+    return path.join('/tmp', fileName);
+  }
+  return configured || DEFAULT_DB_PATH;
+}
+
+const DB_PATH = resolveDbPath();
 
 export { STATUS };
 export const SRS_INTERVALS = [0, 1, 3, 7, 30] as const;
