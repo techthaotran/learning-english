@@ -1,23 +1,30 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
 import dictionaryRouter from './routes/dictionary.js';
 import participantsRouter from './routes/participants.js';
 import translateRouter from './routes/translate.js';
 import { getDb } from './db.js';
-import { swaggerSpec } from './swagger.js';
+import { renderSwaggerUiPage, swaggerSpec } from './swagger.js';
 
 getDb();
 
 const app = express();
 const PORT = process.env.PORT || 4002;
 
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get('/api/docs.json', (_req, res) => {
-  res.json(swaggerSpec);
+
+app.get('/api/docs.json', (req, res) => {
+  const origin = `${req.protocol}://${req.get('host')}`;
+  res.json({
+    ...swaggerSpec,
+    servers: [{ url: origin, description: 'Current deployment' }],
+  });
+});
+app.get(['/api/docs', '/api/docs/'], (_req, res) => {
+  res.type('html').send(renderSwaggerUiPage('/api/docs.json'));
 });
 
 app.get('/api/health', (_req, res) => {

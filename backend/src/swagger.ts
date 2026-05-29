@@ -50,7 +50,44 @@ const swaggerDefinition: OAS3Definition = {
 
 const swaggerOptions: Options = {
   definition: swaggerDefinition,
-  apis: [path.join(__dirname, './routes/*.ts')],
+  apis: [
+    path.join(__dirname, 'routes', '*.js'),
+    path.join(__dirname, 'routes', '*.ts'),
+  ],
 };
 
 export const swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+const SWAGGER_UI_VERSION = '5.11.0';
+
+/** HTML page — CDN assets work on Vercel (express.static / swagger-ui-express do not). */
+export function renderSwaggerUiPage(specUrl: string): string {
+  const css = `https://unpkg.com/swagger-ui-dist@${SWAGGER_UI_VERSION}/swagger-ui.css`;
+  const bundle = `https://unpkg.com/swagger-ui-dist@${SWAGGER_UI_VERSION}/swagger-ui-bundle.js`;
+  const preset = `https://unpkg.com/swagger-ui-dist@${SWAGGER_UI_VERSION}/swagger-ui-standalone-preset.js`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Learning English API</title>
+  <link rel="stylesheet" href="${css}" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="${bundle}" crossorigin></script>
+  <script src="${preset}" crossorigin></script>
+  <script>
+    window.onload = function () {
+      window.ui = SwaggerUIBundle({
+        url: ${JSON.stringify(specUrl)},
+        dom_id: '#swagger-ui',
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        layout: 'StandaloneLayout',
+      });
+    };
+  </script>
+</body>
+</html>`;
+}
