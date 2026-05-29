@@ -3,6 +3,9 @@ import type {
   DashboardResponse,
   DictionaryWord,
   FlashcardWord,
+  GlobalLevelSummary,
+  GlobalTypeSummary,
+  PaginatedGlobalWords,
   PaginatedWords,
   ReviewResult,
   UpdateWordPayload,
@@ -17,6 +20,7 @@ function buildApiUrl(path: string): string {
 }
 
 const BASE = buildApiUrl('/api/dictionary');
+const GLOBAL_BASE = buildApiUrl('/api/global-dictionary');
 const AUTH_BASE = buildApiUrl('/api/auth');
 
 interface ApiError {
@@ -155,4 +159,28 @@ export function submitFlashcardReview(payload: {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export function listGlobalLevels(): Promise<GlobalLevelSummary[]> {
+  return request(`${GLOBAL_BASE}/levels`);
+}
+
+export function listGlobalTypes(level: string): Promise<GlobalTypeSummary[]> {
+  return request(`${GLOBAL_BASE}/types?level=${encodeURIComponent(level)}`);
+}
+
+export function listGlobalWords(params: {
+  level: string;
+  page?: number;
+  pageSize?: number;
+  excludeNotInFlashcard?: boolean;
+  type?: string;
+}): Promise<PaginatedGlobalWords> {
+  const search = new URLSearchParams();
+  search.set('level', params.level);
+  if (params.page) search.set('page', String(params.page));
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+  if (params.excludeNotInFlashcard) search.set('excludeNotInFlashcard', 'true');
+  if (params.type?.trim()) search.set('type', params.type.trim());
+  return request(`${GLOBAL_BASE}/words?${search.toString()}`);
 }

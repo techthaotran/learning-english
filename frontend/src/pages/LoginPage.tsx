@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Library } from 'lucide-react';
 import { loginUser, registerUser } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -151,6 +151,15 @@ export default function LoginPage() {
                   : mode === 'login'
                     ? 'Đăng nhập'
                     : 'Đăng ký'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/dictionary')}
+              >
+                <Library className="size-4" />
+                Xem từ điển (không cần đăng nhập)
               </Button>
               <p className="text-muted-foreground text-center text-sm">
                 {mode === 'login' ? (

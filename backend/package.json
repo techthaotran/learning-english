@@ -12,7 +12,8 @@
     "dev:prepare": "tsc",
     "dev:watch": "tsc -w --preserveWatchOutput",
     "dev:run": "node --watch dist/index.js",
-    "dev": "pnpm dev:prepare && concurrently -k -n tsc,api -c yellow,green \"pnpm dev:watch\" \"pnpm dev:run\""
+    "dev": "pnpm dev:prepare && concurrently -k -n tsc,api -c yellow,green \"pnpm dev:watch\" \"pnpm dev:run\"",
+    "seed:global-dictionary": "pnpm build && node dist/scripts/seedGlobalDictionary.js"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

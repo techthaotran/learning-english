@@ -2,6 +2,7 @@ import './loadEnv.js';
 import express from 'express';
 import cors, { type CorsOptions } from 'cors';
 import dictionaryRouter from './routes/dictionary.js';
+import globalDictionaryRouter from './routes/globalDictionary.js';
 import authRouter from './routes/auth.js';
 import translateRouter from './routes/translate.js';
 import { initDb } from './db.js';
@@ -69,6 +70,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/dictionary', dictionaryRouter);
+app.use('/api/global-dictionary', globalDictionaryRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/translate', translateRouter);
 

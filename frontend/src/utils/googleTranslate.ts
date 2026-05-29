@@ -1,4 +1,4 @@
-import type { WordLookupResult } from '@/shared/types';
+import type { TextTranslateResult, WordLookupResult } from '@/shared/types';
 
 /**
  * Auto fill: client gọi API nội bộ → server gọi Google translate_a/single (tránh CORS).
@@ -19,6 +19,24 @@ export async function lookupWordFromGoogle(word: string): Promise<WordLookupResu
 
   const res = await fetch(buildApiUrl(`/api/translate/lookup?q=${encodeURIComponent(q)}`));
   const data = (await res.json().catch(() => ({}))) as WordLookupResult & {
+    error?: string;
+  };
+
+  if (!res.ok) {
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+
+  return data;
+}
+
+export async function translateTextFromGoogle(text: string): Promise<TextTranslateResult> {
+  const q = text.trim();
+  if (!q) {
+    throw new Error('Câu ví dụ không được để trống');
+  }
+
+  const res = await fetch(buildApiUrl(`/api/translate/text?q=${encodeURIComponent(q)}`));
+  const data = (await res.json().catch(() => ({}))) as TextTranslateResult & {
     error?: string;
   };
 

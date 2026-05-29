@@ -2,7 +2,8 @@ node_modules/
 package-lock.json
 npm-shrinkwrap.json
 dist/
-backend/data/
+data/*
+!data/oxford_3000.csv
 *.db
 .DS_Store
 .env

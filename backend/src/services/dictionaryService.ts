@@ -83,6 +83,13 @@ export async function createWord(
       STATUS.NEW,
     ]
   );
+
+  const globalDictionaryId = payload.globalDictionaryId;
+  if (globalDictionaryId != null && Number.isFinite(globalDictionaryId)) {
+    const { recordGlobalFlashcardLink } = await import('./globalDictionaryService.js');
+    await recordGlobalFlashcardLink(userId, Number(globalDictionaryId), result.lastInsertRowid);
+  }
+
   return getWordById(result.lastInsertRowid, userId);
 }
 

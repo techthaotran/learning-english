@@ -1,36 +1,81 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BellRing,
   BookMarked,
+  BookOpen,
   Layers,
   LineChart,
   LogOut,
   PlusCircle,
   Search,
   Settings,
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   getReminderStatus,
   notifyDueReminder,
   requestReminderPermission,
   resetReminderAnchor,
-} from '@/utils/studyReminder';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+} from "@/utils/studyReminder";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { path: '/add', label: 'Thêm từ mới', desc: 'Bổ sung từ vào từ điển', icon: PlusCircle, adminOnly: false },
-  { path: '/flashcard', label: 'Ôn tập flashcard', desc: 'SRS — 5 thẻ mỗi lượt', icon: Layers, adminOnly: false },
-  { path: '/search', label: 'Tìm kiếm', desc: 'Tra cứu theo tên từ', icon: Search, adminOnly: false },
-  { path: '/dashboard', label: 'Dashboard', desc: 'Tiến độ & so sánh', icon: LineChart, adminOnly: false },
   {
-    path: '/words',
-    label: 'Quản lý từ vựng',
-    desc: 'Toàn bộ từ vựng (admin)',
+    path: "/dashboard",
+    label: "Dashboard",
+    desc: "Tiến độ & so sánh",
+    icon: LineChart,
+    adminOnly: false,
+  },
+  {
+    path: "/add",
+    label: "Thêm từ mới",
+    desc: "Bổ sung từ vào từ điển",
+    icon: PlusCircle,
+    adminOnly: false,
+  },
+  {
+    path: "/dictionary",
+    label: "Từ điển",
+    desc: "Oxford 3000 theo CEFR — xem công khai",
+    icon: BookOpen,
+    adminOnly: false,
+  },
+  {
+    path: "/flashcard",
+    label: "Ôn tập flashcard",
+    desc: "SRS — 5 thẻ mỗi lượt",
+    icon: Layers,
+    adminOnly: false,
+  },
+  {
+    path: "/search",
+    label: "Tìm kiếm",
+    desc: "Tra cứu theo tên từ",
+    icon: Search,
+    adminOnly: false,
+  },
+
+  {
+    path: "/dictionary",
+    label: "Từ điển",
+    desc: "Oxford 3000 theo CEFR — xem công khai",
+    icon: BookOpen,
+    adminOnly: false,
+  },
+  {
+    path: "/words",
+    label: "Quản lý từ vựng",
+    desc: "Toàn bộ từ vựng (admin)",
     icon: BookMarked,
     adminOnly: true,
   },
@@ -40,16 +85,18 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { userName, isAdmin, logout } = useAuth();
   const [dueNow, setDueNow] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
-    typeof window !== 'undefined' && 'Notification' in window
+  const [permission, setPermission] = useState<
+    NotificationPermission | "unsupported"
+  >(
+    typeof window !== "undefined" && "Notification" in window
       ? Notification.permission
-      : 'unsupported'
+      : "unsupported",
   );
   const [nextOffset, setNextOffset] = useState<number | null>(null);
 
   async function handleLogout() {
     await logout();
-    navigate('/login');
+    navigate("/login");
   }
 
   useEffect(() => {
@@ -60,8 +107,8 @@ export default function HomePage() {
       if (!mounted) return;
       setDueNow(status.dueNow);
       setNextOffset(status.nextOffsetMinutes);
-      if (status.enabled && Notification.permission === 'granted') {
-        await notifyDueReminder(userName ?? '');
+      if (status.enabled && Notification.permission === "granted") {
+        await notifyDueReminder(userName ?? "");
       }
     }
 
@@ -77,8 +124,8 @@ export default function HomePage() {
   }, [userName]);
 
   const flashcardHint = useMemo(() => {
-    if (dueNow) return 'Đến giờ ôn tập rồi - vào Flashcard ngay';
-    if (nextOffset == null) return 'Hôm nay đã qua các mốc 30p / 1h / 2h / 3h';
+    if (dueNow) return "Đến giờ ôn tập rồi - vào Flashcard ngay";
+    if (nextOffset == null) return "Hôm nay đã qua các mốc 30p / 1h / 2h / 3h";
     return `Mốc nhắc kế tiếp: ${nextOffset} phút`;
   }, [dueNow, nextOffset]);
 
@@ -87,21 +134,28 @@ export default function HomePage() {
     setPermission(result);
   }
 
-  const visibleMenuItems = menuItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.adminOnly || isAdmin,
+  );
 
   return (
     <AppLayout
       title="Trang chủ"
       subtitle={`Xin chào, ${userName}!`}
       footer={
-        <Button variant="outline" className="w-full" onClick={() => void handleLogout()}>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => void handleLogout()}>
           <LogOut className="size-4" />
           Đăng xuất
         </Button>
-      }
-    >
-      {permission !== 'granted' && (
-        <Button variant="secondary" className="w-full" onClick={() => void handleEnableNotification()}>
+      }>
+      {permission !== "granted" && (
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={() => void handleEnableNotification()}>
           <BellRing className="size-4" />
           Bật thông báo ôn tập
         </Button>
@@ -111,16 +165,17 @@ export default function HomePage() {
           <Card
             key={path}
             className={cn(
-              'cursor-pointer py-4 transition-colors hover:bg-accent/50',
-              path === '/flashcard' && dueNow && 'border-primary bg-primary/10 ring-2 ring-primary/30'
+              "cursor-pointer py-4 transition-colors hover:bg-accent/50",
+              path === "/flashcard" &&
+                dueNow &&
+                "border-primary bg-primary/10 ring-2 ring-primary/30",
             )}
             onClick={() => {
-              if (path === '/flashcard') {
+              if (path === "/flashcard") {
                 resetReminderAnchor();
               }
               navigate(path);
-            }}
-          >
+            }}>
             <CardHeader className="flex-row items-center gap-4 space-y-0 px-4">
               <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
                 <Icon className="size-5" />
@@ -128,7 +183,7 @@ export default function HomePage() {
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-base">{label}</CardTitle>
                 <CardDescription>
-                  {path === '/flashcard' ? flashcardHint : desc}
+                  {path === "/flashcard" ? flashcardHint : desc}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -137,14 +192,15 @@ export default function HomePage() {
         {isAdmin && (
           <Card
             className="cursor-pointer py-4 transition-colors hover:bg-accent/50"
-            onClick={() => navigate('/settings-debug')}
-          >
+            onClick={() => navigate("/settings-debug")}>
             <CardHeader className="flex-row items-center gap-4 space-y-0 px-4">
               <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
                 <Settings className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-base">Quản lý notification</CardTitle>
+                <CardTitle className="text-base">
+                  Quản lý notification
+                </CardTitle>
                 <CardDescription>Debug mốc nhắc ôn tập (admin)</CardDescription>
               </div>
             </CardHeader>

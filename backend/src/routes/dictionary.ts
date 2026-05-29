@@ -48,7 +48,7 @@ router.post('/', async (req: Request, res: ExpressResponse) => {
   const user = await requireUser(req, res);
   if (!user) return;
 
-  const { name, type, transcription, meaning, example } = req.body;
+  const { name, type, transcription, meaning, example, globalDictionaryId } = req.body;
   if (!name?.trim()) {
     res.status(400).json({ error: 'Tên từ không được để trống' });
     return;
@@ -60,6 +60,8 @@ router.post('/', async (req: Request, res: ExpressResponse) => {
       transcription,
       meaning,
       example,
+      globalDictionaryId:
+        globalDictionaryId != null ? Number(globalDictionaryId) : undefined,
     });
     res.status(201).json(word);
   } catch (err) {

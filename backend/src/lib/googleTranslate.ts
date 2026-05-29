@@ -1,4 +1,4 @@
-import type { WordLookupResult } from '../shared/types.js';
+import type { TextTranslateResult, WordLookupResult } from '../shared/types.js';
 
 export const GOOGLE_TRANSLATE_API =
   'https://translate.google.com/translate_a/single';
@@ -12,6 +12,7 @@ const REQUEST_TIMEOUT_MS = 8000;
 const BASE_RETRY_DELAY_MS = 300;
 
 const lookupCache = new Map<string, { expiresAt: number; value: WordLookupResult }>();
+const textTranslateCache = new Map<string, { expiresAt: number; value: string }>();
 
 interface DictEntry {
   pos?: string;
@@ -284,4 +285,50 @@ export async function fetchWordFromGoogle(word: string): Promise<WordLookupResul
   });
 
   return result;
+}
+
+export async function fetchTextTranslationFromGoogle(text: string): Promise<TextTranslateResult> {
+  const q = text.trim();
+  if (!q) {
+    throw new Error('Nội dung dịch không được để trống');
+  }
+
+  const cacheKey = q.toLowerCase();
+  const cached = textTranslateCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { text: q, translation: cached.value };
+  }
+
+  let translation = '';
+
+  try {
+    const data = (await fetchJsonWithRetry(
+      buildGoogleTranslateUrl(q)
+    )) as GoogleTranslateResponse;
+    translation = data.sentences?.[0]?.trans?.trim() ?? '';
+  } catch {
+    translation = '';
+  }
+
+  if (!translation) {
+    try {
+      const fallbackData = (await fetchJsonWithRetry(
+        buildGoogleTranslateFallbackUrl(q)
+      )) as GoogleTranslateArrayResponse;
+      translation = parseArrayResponse(q, fallbackData).meaning.trim();
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Không dịch được câu ví dụ');
+    }
+  }
+
+  if (!translation) {
+    throw new Error('Không lấy được bản dịch từ Google Translate');
+  }
+
+  textTranslateCache.set(cacheKey, {
+    value: translation,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+
+  return { text: q, translation };
 }

@@ -9,11 +9,13 @@ import FlashcardPage from './pages/FlashcardPage';
 import DashboardPage from './pages/DashboardPage';
 import WordManagePage from './pages/WordManagePage';
 import SettingsDebugPage from './pages/SettingsDebugPage';
+import GlobalDictionaryPage from './pages/GlobalDictionaryPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/dictionary" element={<GlobalDictionaryPage />} />
       <Route
         path="/"
         element={

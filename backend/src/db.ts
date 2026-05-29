@@ -21,6 +21,17 @@ export interface DictionaryRow {
   created_date: string;
 }
 
+export interface GlobalDictionaryRow {
+  id: number;
+  name: string;
+  level: string;
+  type: string;
+  transcription: string;
+  meaning: string;
+  example: string;
+  created_date: string;
+}
+
 function resolveTursoConfig(): { url: string; authToken: string } {
   const url = process.env.TURSO_DATABASE_URL?.trim();
   const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
@@ -339,6 +350,47 @@ async function initSchema(database: Client): Promise<void> {
           )
         `,
       },
+      {
+        sql: `
+          CREATE TABLE IF NOT EXISTS global_dictionary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            level TEXT NOT NULL,
+            type TEXT,
+            transcription TEXT,
+            meaning TEXT,
+            example TEXT NOT NULL DEFAULT '[]',
+            created_date TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+          )
+        `,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_global_dictionary_name ON global_dictionary(name)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_global_dictionary_level ON global_dictionary(level)`,
+      },
+      {
+        sql: `
+          CREATE TABLE IF NOT EXISTS global_dictionary_flashcard (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            global_dictionary_id INTEGER NOT NULL,
+            my_dictionary_id INTEGER,
+            added_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (global_dictionary_id) REFERENCES global_dictionary(id),
+            FOREIGN KEY (my_dictionary_id) REFERENCES my_dictionary(id) ON DELETE SET NULL,
+            UNIQUE(user_id, global_dictionary_id)
+          )
+        `,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_gdf_user ON global_dictionary_flashcard(user_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_gdf_global ON global_dictionary_flashcard(global_dictionary_id)`,
+      },
     ],
     'write'
   );
@@ -348,6 +400,9 @@ async function initSchema(database: Client): Promise<void> {
 
   const { seedAdminUser } = await import('./services/userService.js');
   await seedAdminUser();
+
+  const { seedGlobalDictionary } = await import('./services/globalDictionaryService.js');
+  await seedGlobalDictionary();
 
   await database.execute(`
     INSERT OR IGNORE INTO participants (user_name, last_seen_at)
@@ -419,5 +474,15 @@ export function mapDictionaryRow(row: DictionaryRow | undefined): DictionaryWord
     ...rest,
     example: parseExamples(row.example),
     ...(username != null ? { username } : {}),
+  };
+}
+
+export function mapGlobalDictionaryRow(
+  row: GlobalDictionaryRow | undefined
+): Omit<GlobalDictionaryRow, 'example'> & { example: ExampleItem[] } | null {
+  if (!row) return null;
+  return {
+    ...row,
+    example: parseExamples(row.example),
   };
 }
