@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
     "build": "pnpm lint && tsc",
+    "vercel-build": "tsc",
     "start": "node dist/index.js",
     "dev:prepare": "tsc",
     "dev:watch": "tsc -w --preserveWatchOutput",

@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "outputDirectory": ".",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm vercel-build",
   "builds": [
-    { "src": "src/index.ts", "use": "@vercel/node" }
+    { "src": "dist/index.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "src/index.ts" }
+    { "src": "/(.*)", "dest": "dist/index.js" }
   ]
 }
