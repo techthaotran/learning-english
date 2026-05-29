@@ -47,10 +47,12 @@ export default function FlashcardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [batchCompleted, setBatchCompleted] = useState(false);
 
   const loadCards = useCallback(async () => {
     setLoading(true);
     setError('');
+    setBatchCompleted(false);
     try {
       const data = await getFlashcards(userName);
       setCards(data);
@@ -109,7 +111,7 @@ export default function FlashcardPage() {
         setIndex((i) => i + 1);
         setFlipped(false);
       } else {
-        await loadCards();
+        setBatchCompleted(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi');
@@ -122,6 +124,24 @@ export default function FlashcardPage() {
     return (
       <AppLayout title="Flashcard" onBack={() => navigate('/')}>
         <p className="text-muted-foreground py-12 text-center">Đang tải...</p>
+      </AppLayout>
+    );
+  }
+
+  if (batchCompleted) {
+    return (
+      <AppLayout title="Ôn tập flashcard" onBack={() => navigate('/')}>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <p className="py-12 text-center text-lg font-medium">
+          Chúc mừng bạn đã hoàn thành
+        </p>
+        <Button className="w-full" onClick={() => void loadCards()}>
+          Làm mới
+        </Button>
       </AppLayout>
     );
   }

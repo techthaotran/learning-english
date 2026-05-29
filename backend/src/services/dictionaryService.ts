@@ -87,6 +87,7 @@ export async function getWordById(id: number): Promise<DictionaryWord | null> {
 export interface ListWordsParams {
   keyword?: string;
   status?: string;
+  emptyExample?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -94,6 +95,7 @@ export interface ListWordsParams {
 export async function listWords({
   keyword,
   status,
+  emptyExample,
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 }: ListWordsParams = {}): Promise<PaginatedWords> {
@@ -111,6 +113,9 @@ export async function listWords({
   if (status && isWordStatus(status)) {
     where += ' AND status = ?';
     params.push(status);
+  }
+  if (emptyExample) {
+    where += " AND (example = '[]' OR trim(example) = '' OR json_array_length(example) = 0)";
   }
 
   const countRow = await queryOne<{ count: number }>(

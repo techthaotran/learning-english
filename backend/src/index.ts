@@ -22,7 +22,23 @@ app.use(async (_req, _res, next) => {
 });
 
 app.set('trust proxy', 1);
-app.use(cors());
+
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:4001',
+  'https://fcard-gui.vercel.app',
+]);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 app.use(express.json());
 
 app.get('/api/docs.json', (req, res) => {

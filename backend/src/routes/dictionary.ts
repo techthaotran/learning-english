@@ -5,11 +5,12 @@ import * as dictionaryService from '../services/dictionaryService.js';
 const router = Router();
 
 router.get('/', async (req: Request, res: ExpressResponse) => {
-  const { q, status, page, pageSize } = req.query;
+  const { q, status, emptyExample, page, pageSize } = req.query;
   try {
     const result = await dictionaryService.listWords({
       keyword: typeof q === 'string' ? q : undefined,
       status: typeof status === 'string' ? status : undefined,
+      emptyExample: emptyExample === 'true' || emptyExample === '1',
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : undefined,
     });

@@ -33,8 +33,10 @@ export default function WordManagePage() {
   const [error, setError] = useState('');
   const [filterQ, setFilterQ] = useState('');
   const [filterStatus, setFilterStatus] = useState<WordStatus | 'all'>('all');
+  const [filterEmptyExample, setFilterEmptyExample] = useState(false);
   const [appliedQ, setAppliedQ] = useState('');
   const [appliedStatus, setAppliedStatus] = useState<WordStatus | ''>('');
+  const [appliedEmptyExample, setAppliedEmptyExample] = useState(false);
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState<ModalState>({
     open: false,
@@ -49,6 +51,7 @@ export default function WordManagePage() {
       const result = await listWords({
         q: appliedQ,
         status: appliedStatus || undefined,
+        emptyExample: appliedEmptyExample || undefined,
         page,
         pageSize: DEFAULT_PAGE_SIZE,
       });
@@ -59,7 +62,7 @@ export default function WordManagePage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedQ, appliedStatus, page]);
+  }, [appliedQ, appliedStatus, appliedEmptyExample, page]);
 
   useEffect(() => {
     void loadWords();
@@ -68,6 +71,7 @@ export default function WordManagePage() {
   function applyFilters() {
     setAppliedQ(filterQ);
     setAppliedStatus(filterStatus === 'all' ? '' : filterStatus);
+    setAppliedEmptyExample(filterEmptyExample);
     setPage(1);
   }
 
@@ -145,6 +149,15 @@ export default function WordManagePage() {
               </SelectContent>
             </Select>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={filterEmptyExample}
+              onChange={(e) => setFilterEmptyExample(e.target.checked)}
+              className="size-4 rounded border"
+            />
+            Chỉ từ thiếu ví dụ
+          </label>
           <Button onClick={applyFilters}>Lọc</Button>
         </CardContent>
       </Card>

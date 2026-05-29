@@ -37,6 +37,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 export interface ListWordsParams {
   q?: string;
   status?: WordStatus | '';
+  emptyExample?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -45,6 +46,7 @@ export function listWords(params: ListWordsParams = {}): Promise<PaginatedWords>
   const search = new URLSearchParams();
   if (params.q?.trim()) search.set('q', params.q.trim());
   if (params.status) search.set('status', params.status);
+  if (params.emptyExample) search.set('emptyExample', 'true');
   if (params.page) search.set('page', String(params.page));
   if (params.pageSize) search.set('pageSize', String(params.pageSize));
   const qs = search.toString();
