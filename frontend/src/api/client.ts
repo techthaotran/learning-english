@@ -7,7 +7,7 @@ import type {
   ReviewResult,
   UpdateWordPayload,
   WordStatus,
-} from '@learning-english/shared';
+} from '@/shared/types';
 
 const RAW_API_BASE = import.meta.env.VITE_API_BASE?.trim() || '';
 

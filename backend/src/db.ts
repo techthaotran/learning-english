@@ -2,12 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import {
-  STATUS,
-  type DictionaryWord,
-  type ExampleItem,
-  type WordStatus,
-} from '@learning-english/shared';
+import { STATUS, type WordStatus } from './shared/wordStatus.js';
+import type { DictionaryWord, ExampleItem } from './shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'learning.db');

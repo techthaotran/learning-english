@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Copy, Sparkles } from 'lucide-react';
-import type { DictionaryWord, UpdateWordPayload, WordStatus } from '@learning-english/shared';
-import { EXAMPLE_TEMPLATE, WORD_STATUSES } from '@/constants/wordStatus';
+import type { DictionaryWord, UpdateWordPayload, WordStatus } from '@/shared/types';
+import { EXAMPLE_TEMPLATE, WORD_STATUSES } from '@/shared/wordStatus';
 import { lookupWordFromGoogle } from '@/utils/googleTranslate';
 import AudioButton from '@/components/AudioButton';
 import { Button } from '@/components/ui/button';

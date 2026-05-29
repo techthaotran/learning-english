@@ -3,16 +3,18 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   isWordStatus,
-  type CreateWordPayload,
-  type DashboardResponse,
-  type DictionaryWord,
-  type FlashcardWord,
-  type PaginatedWords,
   type ReviewResult,
-  type StatusCounts,
-  type UpdateWordPayload,
   type WordStatus,
-} from '@learning-english/shared';
+} from '../shared/wordStatus.js';
+import type {
+  CreateWordPayload,
+  DashboardResponse,
+  DictionaryWord,
+  FlashcardWord,
+  PaginatedWords,
+  StatusCounts,
+  UpdateWordPayload,
+} from '../shared/types.js';
 import {
   getDb,
   mapDictionaryRow,

@@ -5,15 +5,14 @@
   "type": "module",
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
-    "build": "pnpm lint && pnpm -C ../packages/shared build && tsc",
+    "build": "pnpm lint && tsc",
     "start": "node dist/index.js",
-    "dev:prepare": "pnpm -C ../packages/shared build && tsc",
+    "dev:prepare": "tsc",
     "dev:watch": "tsc -w --preserveWatchOutput",
     "dev:run": "node --watch dist/index.js",
     "dev": "pnpm dev:prepare && concurrently -k -n tsc,api -c yellow,green \"pnpm dev:watch\" \"pnpm dev:run\""
   },
   "dependencies": {
-    "@learning-english/shared": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",

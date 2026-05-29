@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Copy, Sparkles } from 'lucide-react';
 import { createWord } from '@/api/client';
 import { lookupWordFromGoogle } from '@/utils/googleTranslate';
-import { EXAMPLE_TEMPLATE } from '@/constants/wordStatus';
+import { EXAMPLE_TEMPLATE } from '@/shared/wordStatus';
 import { AppLayout } from '@/components/layout/AppLayout';
 import AudioButton from '@/components/AudioButton';
 import { Button } from '@/components/ui/button';

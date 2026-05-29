@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
-import type { DictionaryWord, PaginatedWords, UpdateWordPayload, WordStatus } from '@learning-english/shared';
+import type { DictionaryWord, PaginatedWords, UpdateWordPayload, WordStatus } from '@/shared/types';
 import { listWords, createWord, updateWord, deleteWord } from '@/api/client';
 import WordFormModal from '@/components/WordFormModal';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { WORD_STATUSES, DEFAULT_PAGE_SIZE } from '@/constants/wordStatus';
+import { WORD_STATUSES, DEFAULT_PAGE_SIZE } from '@/shared/wordStatus';
 
 interface ModalState {
   open: boolean;

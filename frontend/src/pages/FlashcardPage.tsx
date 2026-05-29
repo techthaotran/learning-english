@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { FlashcardWord, ReviewResult } from '@learning-english/shared';
+import type { FlashcardWord } from '@/shared/types';
+import type { ReviewResult } from '@/shared/wordStatus';
 import { getFlashcards, submitFlashcardReview } from '@/api/client';
 import { getUserName } from '@/utils/storage';
 import { resetReminderAnchor } from '@/utils/studyReminder';

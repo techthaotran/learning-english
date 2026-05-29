@@ -1,4 +1,4 @@
-import type { ParticipantStats } from '@learning-english/shared';
+import type { ParticipantStats } from '../shared/types.js';
 import { getDb } from '../db.js';
 
 export function upsertParticipant(userName: string): void {

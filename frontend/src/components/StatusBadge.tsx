@@ -1,4 +1,4 @@
-import type { WordStatus } from '@learning-english/shared';
+import type { WordStatus } from '@/shared/wordStatus';
 import { Badge } from '@/components/ui/badge';
 
 const variantMap: Record<

@@ -1,4 +1,4 @@
-import type { WordLookupResult } from '@learning-english/shared';
+import type { WordLookupResult } from '../shared/types.js';
 
 export const GOOGLE_TRANSLATE_API =
   'https://translate.google.com/translate_a/single';

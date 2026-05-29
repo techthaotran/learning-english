@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Users } from 'lucide-react';
-import type { DashboardResponse, ParticipantStats } from '@learning-english/shared';
+import type { DashboardResponse, ParticipantStats } from '@/shared/types';
 import { getDashboard } from '@/api/client';
 import { getUserName } from '@/utils/storage';
 import { AppLayout } from '@/components/layout/AppLayout';

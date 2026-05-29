@@ -1,4 +1,4 @@
-import type { WordLookupResult } from '@learning-english/shared';
+import type { WordLookupResult } from '@/shared/types';
 
 /**
  * Auto fill: client gọi API nội bộ → server gọi Google translate_a/single (tránh CORS).

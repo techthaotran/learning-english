@@ -17,9 +17,6 @@ importers:
 
   backend:
     dependencies:
-      '@learning-english/shared':
-        specifier: workspace:*
-        version: link:../packages/shared
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -69,9 +66,6 @@ importers:
 
   frontend:
     dependencies:
-      '@learning-english/shared':
-        specifier: workspace:*
-        version: link:../packages/shared
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -133,12 +127,6 @@ importers:
       vite-plugin-pwa:
         specifier: ^1.3.0
         version: 1.3.0(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.3))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
-
-  packages/shared:
-    devDependencies:
-      typescript:
-        specifier: ^5.7.3
-        version: 5.9.3
 
 packages:
 

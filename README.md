@@ -8,16 +8,14 @@
 |------|--------|
 | API | Express + TypeScript, SQLite (`node:sqlite` — Node ≥ 22.5), nodemon + tsx |
 | GUI | React 19 + TypeScript, Vite, React Router, PWA |
-| Shared | `@learning-english/shared` — types & constants dùng chung |
 | Package manager | [pnpm](https://pnpm.io) workspace |
 
 ## Cấu trúc
 
 ```
 learning-english/
-├── packages/shared/   # WordStatus, DictionaryWord, DashboardResponse, ...
-├── backend/           # Express API (src/*.ts)
-└── frontend/          # React SPA (src/*.tsx)
+├── backend/           # Express API — `src/shared/` (types & constants)
+└── frontend/          # React SPA — `src/shared/` (types & constants)
 ```
 
 ## Cài đặt

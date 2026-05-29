@@ -1,5 +1,5 @@
 import { Router, type Request, type Response as ExpressResponse } from 'express';
-import { REVIEW_RESULTS } from '@learning-english/shared';
+import { REVIEW_RESULTS } from '../shared/wordStatus.js';
 import * as dictionaryService from '../services/dictionaryService.js';
 
 const router = Router();

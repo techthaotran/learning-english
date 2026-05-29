@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon } from 'lucide-react';
-import type { DictionaryWord } from '@learning-english/shared';
+import type { DictionaryWord } from '@/shared/types';
 import { searchWords } from '@/api/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import WordHeader from '@/components/WordHeader';
