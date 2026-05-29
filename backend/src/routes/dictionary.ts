@@ -4,10 +4,10 @@ import * as dictionaryService from '../services/dictionaryService.js';
 
 const router = Router();
 
-router.get('/', (req: Request, res: ExpressResponse) => {
+router.get('/', async (req: Request, res: ExpressResponse) => {
   const { q, status, page, pageSize } = req.query;
   try {
-    const result = dictionaryService.listWords({
+    const result = await dictionaryService.listWords({
       keyword: typeof q === 'string' ? q : undefined,
       status: typeof status === 'string' ? status : undefined,
       page: page ? Number(page) : 1,
@@ -20,14 +20,14 @@ router.get('/', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.post('/', (req: Request, res: ExpressResponse) => {
+router.post('/', async (req: Request, res: ExpressResponse) => {
   const { name, type, transcription, meaning, example } = req.body;
   if (!name?.trim()) {
     res.status(400).json({ error: 'Tên từ không được để trống' });
     return;
   }
   try {
-    const word = dictionaryService.createWord({
+    const word = await dictionaryService.createWord({
       name,
       type,
       transcription,
@@ -41,14 +41,14 @@ router.post('/', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.get('/search', (req: Request, res: ExpressResponse) => {
+router.get('/search', async (req: Request, res: ExpressResponse) => {
   const { q } = req.query;
   if (!q || typeof q !== 'string' || !q.trim()) {
     res.json([]);
     return;
   }
   try {
-    const words = dictionaryService.searchWords(q);
+    const words = await dictionaryService.searchWords(q);
     res.json(words);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -56,11 +56,11 @@ router.get('/search', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.get('/dashboard', (req: Request, res: ExpressResponse) => {
+router.get('/dashboard', async (req: Request, res: ExpressResponse) => {
   const userName =
     typeof req.query.userName === 'string' ? req.query.userName : undefined;
   try {
-    const stats = dictionaryService.getDashboardStats(userName);
+    const stats = await dictionaryService.getDashboardStats(userName);
     res.json(stats);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -68,11 +68,11 @@ router.get('/dashboard', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.get('/flashcards', (req: Request, res: ExpressResponse) => {
+router.get('/flashcards', async (req: Request, res: ExpressResponse) => {
   const userName =
     typeof req.query.userName === 'string' ? req.query.userName : 'guest';
   try {
-    const cards = dictionaryService.getFlashcardBatch(userName);
+    const cards = await dictionaryService.getFlashcardBatch(userName);
     res.json(cards);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -80,7 +80,7 @@ router.get('/flashcards', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.post('/flashcards/review', (req: Request, res: ExpressResponse) => {
+router.post('/flashcards/review', async (req: Request, res: ExpressResponse) => {
   const { dictionaryId, userName, result } = req.body;
   if (!dictionaryId || !result) {
     res.status(400).json({ error: 'Thiếu dictionaryId hoặc result' });
@@ -91,7 +91,7 @@ router.post('/flashcards/review', (req: Request, res: ExpressResponse) => {
     return;
   }
   try {
-    const word = dictionaryService.recordFlashcardReview({
+    const word = await dictionaryService.recordFlashcardReview({
       dictionaryId: Number(dictionaryId),
       userName: userName || 'guest',
       result,
@@ -107,9 +107,9 @@ router.post('/flashcards/review', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.get('/:id', (req: Request, res: ExpressResponse) => {
+router.get('/:id', async (req: Request, res: ExpressResponse) => {
   try {
-    const word = dictionaryService.getWordById(Number(req.params.id));
+    const word = await dictionaryService.getWordById(Number(req.params.id));
     if (!word) {
       res.status(404).json({ error: 'Không tìm thấy từ' });
       return;
@@ -121,10 +121,10 @@ router.get('/:id', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.put('/:id', (req: Request, res: ExpressResponse) => {
+router.put('/:id', async (req: Request, res: ExpressResponse) => {
   const id = Number(req.params.id);
   try {
-    const word = dictionaryService.updateWord(id, req.body);
+    const word = await dictionaryService.updateWord(id, req.body);
     if (!word) {
       res.status(404).json({ error: 'Không tìm thấy từ' });
       return;
@@ -136,10 +136,10 @@ router.put('/:id', (req: Request, res: ExpressResponse) => {
   }
 });
 
-router.delete('/:id', (req: Request, res: ExpressResponse) => {
+router.delete('/:id', async (req: Request, res: ExpressResponse) => {
   const id = Number(req.params.id);
   try {
-    const deleted = dictionaryService.deleteWord(id);
+    const deleted = await dictionaryService.deleteWord(id);
     if (!deleted) {
       res.status(404).json({ error: 'Không tìm thấy từ' });
       return;

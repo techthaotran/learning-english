@@ -6,7 +6,7 @@
 
 | Phần | Stack |
 |------|--------|
-| API | Express + TypeScript, SQLite (`node:sqlite` — Node ≥ 22.5), nodemon + tsx |
+| API | Express + TypeScript, [Turso](https://docs.turso.tech/introduction) (`@libsql/client`), nodemon + tsx |
 | GUI | React 19 + TypeScript, Vite, React Router, PWA |
 | Package manager | [pnpm](https://pnpm.io) workspace |
 
@@ -75,37 +75,43 @@ pnpm preview
 
 Dùng **Web Speech API** (`speechSynthesis`) trên trình duyệt.
 
-## Deploy để không mất database sau mỗi lần release
+## Database — Turso
 
-SQLite file trong Vercel Serverless **không có storage bền vững**, nên nếu deploy API trực tiếp lên Vercel thì dữ liệu sẽ bị ảnh hưởng/reset theo vòng đời function.
+Backend dùng [Turso](https://docs.turso.tech/introduction) (SQLite-compatible, hosted) qua `@libsql/client`.
 
-Thiết lập khuyến nghị:
+### Tạo database trên Turso
 
-1. Deploy **Frontend** lên Vercel.
-2. Deploy **Backend** lên một dịch vụ có disk bền vững (Render/Railway/Fly.io/VM).
-3. Trỏ frontend sang backend bằng biến môi trường `VITE_API_BASE`.
-4. Đặt `DB_PATH` trên backend để lưu SQLite ở thư mục persistent volume.
+```bash
+# Cài Turso CLI: https://docs.turso.tech/cli
+turso auth signup
+turso db create learning-english
+turso db show learning-english --url
+turso db tokens create learning-english
+```
 
-Ví dụ:
+### Biến môi trường backend
 
-- Frontend (Vercel): `VITE_API_BASE=https://api.your-domain.com`
-- Backend: `DB_PATH=/var/data/learning.db`
-
-Hiện tại code đã hỗ trợ:
-
-- `VITE_API_BASE` cho mọi request từ frontend.
-- `DB_PATH` để cấu hình vị trí file SQLite trên backend.
+| Biến | Mô tả |
+|------|--------|
+| `TURSO_DATABASE_URL` | URL database (`libsql://...`) — bắt buộc |
+| `TURSO_AUTH_TOKEN` | Auth token từ `turso db tokens create` — bắt buộc |
 
 ### Env cho Development / Production
 
 - Frontend:
   - `frontend/.env.development` -> `VITE_API_BASE=http://localhost:4002`
   - `frontend/.env.production` -> `VITE_API_BASE=https://api.your-domain.com`
-- Backend:
-  - `backend/.env.development` -> `PORT=4002`, `DB_PATH=./data/learning.dev.db`
-  - `backend/.env.production` -> `PORT=4002`, `DB_PATH=/var/data/learning.db`
+- Backend (local & production đều dùng Turso):
+  - `backend/.env.development` -> `PORT`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
+  - `backend/.env.production` -> cùng các biến trên
 
-Backend đã load env bằng `dotenv` từ `backend/src/index.ts`.
+Backend tự load `backend/.env.development` hoặc `backend/.env.production` theo `NODE_ENV`.
+
+## Deploy
+
+1. Deploy **Frontend** lên Vercel với `VITE_API_BASE`.
+2. Deploy **Backend** (Vercel, Render, Fly.io, …) với `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`.
+3. Dữ liệu lưu trên Turso Cloud — không cần persistent volume.
 
 ### Deploy API lên Vercel (Express zero-config)
 

@@ -15,6 +15,7 @@
     "dev": "pnpm dev:prepare && concurrently -k -n tsc,api -c yellow,green \"pnpm dev:watch\" \"pnpm dev:run\""
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",
