@@ -14,13 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AddWordPage() {
-  const MAX_EXAMPLE_ROWS = 10;
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [type, setType] = useState('');
   const [meaning, setMeaning] = useState('');
   const [transcription, setTranscription] = useState('');
-  const [example, setExample] = useState(EXAMPLE_TEMPLATE);
+  const [example, setExample] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,15 +64,6 @@ Ví dụ format mong muốn:
     } catch {
       setError('Không copy được prompt. Hãy kiểm tra quyền clipboard.');
     }
-  }
-
-  function handleExampleChange(value: string) {
-    const lines = value.split('\n');
-    if (lines.length > MAX_EXAMPLE_ROWS) {
-      setExample(lines.slice(0, MAX_EXAMPLE_ROWS).join('\n'));
-      return;
-    }
-    setExample(value);
   }
 
   async function handleAutoFill() {
@@ -125,7 +115,7 @@ Ví dụ format mong muốn:
       setType('');
       setMeaning('');
       setTranscription('');
-      setExample(EXAMPLE_TEMPLATE);
+      setExample('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi');
     } finally {
@@ -209,13 +199,14 @@ Ví dụ format mong muốn:
               <Textarea
                 id="example"
                 value={example}
-                onChange={(e) => handleExampleChange(e.target.value)}
+                onChange={(e) => setExample(e.target.value)}
                 className="font-mono text-xs"
-                rows={MAX_EXAMPLE_ROWS}
+                rows={10}
+                placeholder={EXAMPLE_TEMPLATE}
                 required
               />
               <p className="text-muted-foreground text-xs">
-                Mảng JSON: sentence, meaning (tối đa {MAX_EXAMPLE_ROWS} dòng)
+                Mảng JSON: sentence, meaning
               </p>
             </div>
             {error && (
