@@ -63,6 +63,16 @@ export async function isUsernameTaken(username: string): Promise<boolean> {
   return row != null;
 }
 
+export async function getUserIdByUsername(username: string): Promise<number | null> {
+  const trimmed = username.trim();
+  if (!trimmed) return null;
+  const row = await queryOne<{ id: number }>(
+    `SELECT id FROM users WHERE username = ? COLLATE NOCASE`,
+    [trimmed]
+  );
+  return row?.id ?? null;
+}
+
 export async function isAdminUser(username: string): Promise<boolean> {
   const row = await queryOne<{ is_admin: number }>(
     `SELECT is_admin FROM users WHERE username = ? COLLATE NOCASE`,

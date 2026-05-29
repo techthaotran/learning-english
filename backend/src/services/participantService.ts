@@ -31,16 +31,17 @@ export async function getAllParticipantStats(): Promise<ParticipantStats[]> {
      FROM participants p
      LEFT JOIN (
        SELECT
-         user_name,
+         u.username,
          COUNT(*) AS total_reviews,
-         SUM(CASE WHEN result = 'hoàn thành' THEN 1 ELSE 0 END) AS completed_reviews,
+         SUM(CASE WHEN sh.result = 'hoàn thành' THEN 1 ELSE 0 END) AS completed_reviews,
          COUNT(DISTINCT CASE
-           WHEN date(reviewed_at) = date('now', 'localtime') THEN dictionary_id
+           WHEN date(sh.reviewed_at) = date('now', 'localtime') THEN sh.dictionary_id
          END) AS studied_today,
-         MAX(reviewed_at) AS last_active_at
-       FROM study_history
-       GROUP BY user_name
-     ) s ON p.user_name = s.user_name
+         MAX(sh.reviewed_at) AS last_active_at
+       FROM study_history sh
+       INNER JOIN users u ON u.id = sh.user_id
+       GROUP BY sh.user_id
+     ) s ON p.user_name = s.username COLLATE NOCASE
      ORDER BY studied_today DESC, total_reviews DESC, p.user_name ASC`
   );
 

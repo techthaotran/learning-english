@@ -3,16 +3,25 @@ import { getUserNameFromRequest } from '../lib/authCookie.js';
 import { requireAdmin } from '../lib/requireAdmin.js';
 import { REVIEW_RESULTS } from '../shared/wordStatus.js';
 import * as dictionaryService from '../services/dictionaryService.js';
+import { getUserIdByUsername } from '../services/userService.js';
 
 const router = Router();
 
-function requireUserName(req: Request, res: ExpressResponse): string | null {
+async function requireUser(
+  req: Request,
+  res: ExpressResponse
+): Promise<{ userId: number; userName: string } | null> {
   const userName = getUserNameFromRequest(req);
   if (!userName) {
     res.status(401).json({ error: 'Chưa đăng nhập' });
     return null;
   }
-  return userName;
+  const userId = await getUserIdByUsername(userName);
+  if (!userId) {
+    res.status(401).json({ error: 'Tài khoản không tồn tại' });
+    return null;
+  }
+  return { userId, userName };
 }
 
 router.get('/', async (req: Request, res: ExpressResponse) => {
@@ -36,8 +45,8 @@ router.get('/', async (req: Request, res: ExpressResponse) => {
 });
 
 router.post('/', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   const { name, type, transcription, meaning, example } = req.body;
   if (!name?.trim()) {
@@ -45,7 +54,7 @@ router.post('/', async (req: Request, res: ExpressResponse) => {
     return;
   }
   try {
-    const word = await dictionaryService.createWord(userName, {
+    const word = await dictionaryService.createWord(user.userId, {
       name,
       type,
       transcription,
@@ -60,8 +69,8 @@ router.post('/', async (req: Request, res: ExpressResponse) => {
 });
 
 router.get('/search', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   const { q } = req.query;
   if (!q || typeof q !== 'string' || !q.trim()) {
@@ -69,7 +78,7 @@ router.get('/search', async (req: Request, res: ExpressResponse) => {
     return;
   }
   try {
-    const words = await dictionaryService.searchWords(q, userName);
+    const words = await dictionaryService.searchWords(q, user.userId);
     res.json(words);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -78,11 +87,11 @@ router.get('/search', async (req: Request, res: ExpressResponse) => {
 });
 
 router.get('/dashboard', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   try {
-    const stats = await dictionaryService.getDashboardStats(userName);
+    const stats = await dictionaryService.getDashboardStats(user.userId, user.userName);
     res.json(stats);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -91,11 +100,11 @@ router.get('/dashboard', async (req: Request, res: ExpressResponse) => {
 });
 
 router.get('/flashcards', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   try {
-    const cards = await dictionaryService.getFlashcardBatch(userName);
+    const cards = await dictionaryService.getFlashcardBatch(user.userId);
     res.json(cards);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -104,8 +113,8 @@ router.get('/flashcards', async (req: Request, res: ExpressResponse) => {
 });
 
 router.post('/flashcards/review', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   const { dictionaryId, result } = req.body;
   if (!dictionaryId || !result) {
@@ -119,7 +128,8 @@ router.post('/flashcards/review', async (req: Request, res: ExpressResponse) => 
   try {
     const word = await dictionaryService.recordFlashcardReview({
       dictionaryId: Number(dictionaryId),
-      userName,
+      userId: user.userId,
+      userName: user.userName,
       result,
     });
     if (!word) {
@@ -134,11 +144,11 @@ router.post('/flashcards/review', async (req: Request, res: ExpressResponse) => 
 });
 
 router.get('/:id', async (req: Request, res: ExpressResponse) => {
-  const userName = requireUserName(req, res);
-  if (!userName) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
   try {
-    const word = await dictionaryService.getWordById(Number(req.params.id), userName);
+    const word = await dictionaryService.getWordById(Number(req.params.id), user.userId);
     if (!word) {
       res.status(404).json({ error: 'Không tìm thấy từ' });
       return;

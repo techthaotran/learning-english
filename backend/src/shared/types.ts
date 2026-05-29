@@ -7,7 +7,8 @@ export interface ExampleItem {
 
 export interface DictionaryWord {
   id: number;
-  user_name: string;
+  user_id: number;
+  username?: string;
   name: string;
   type: string;
   transcription: string;

@@ -10,7 +10,8 @@ let initPromise: Promise<void> | undefined;
 
 export interface DictionaryRow {
   id: number;
-  user_name: string;
+  user_id: number;
+  username?: string;
   name: string;
   type: string;
   transcription: string;
@@ -68,7 +69,7 @@ export async function initDb(): Promise<void> {
   return initPromise;
 }
 
-async function migrateDictionaryTable(database: Client): Promise<void> {
+async function renameDictionaryTableIfNeeded(database: Client): Promise<void> {
   const tables = await database.execute(
     `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('dictionary', 'my_dictionary')`
   );
@@ -77,18 +78,174 @@ async function migrateDictionaryTable(database: Client): Promise<void> {
   if (tableNames.includes('dictionary') && !tableNames.includes('my_dictionary')) {
     await database.execute('ALTER TABLE dictionary RENAME TO my_dictionary');
   }
+}
 
-  if (!tableNames.includes('dictionary') && !tableNames.includes('my_dictionary')) {
-    return;
+async function tableHasColumn(
+  database: Client,
+  table: string,
+  column: string
+): Promise<boolean> {
+  const cols = await database.execute(`PRAGMA table_info(${table})`);
+  return cols.rows.some((row) => String(row.name) === column);
+}
+
+async function ensureUsersForLegacyNames(database: Client): Promise<void> {
+  const usersTable = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'`
+  );
+  if (usersTable.rows.length === 0) return;
+
+  const legacySelects: string[] = [];
+  const dictExists = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'my_dictionary'`
+  );
+  if (
+    dictExists.rows.length > 0 &&
+    (await tableHasColumn(database, 'my_dictionary', 'user_name'))
+  ) {
+    legacySelects.push('SELECT user_name FROM my_dictionary');
   }
 
-  const columns = await database.execute('PRAGMA table_info(my_dictionary)');
-  const hasUserName = columns.rows.some((row) => String(row.name) === 'user_name');
-  if (!hasUserName) {
-    await database.execute(
-      `ALTER TABLE my_dictionary ADD COLUMN user_name TEXT NOT NULL DEFAULT 'guest'`
-    );
+  const historyExists = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'study_history'`
+  );
+  if (
+    historyExists.rows.length > 0 &&
+    (await tableHasColumn(database, 'study_history', 'user_name'))
+  ) {
+    legacySelects.push('SELECT user_name FROM study_history');
   }
+
+  if (legacySelects.length === 0) return;
+
+  const { hashPassword } = await import('./lib/password.js');
+  const distinct = await database.execute(`
+    SELECT DISTINCT user_name AS name FROM (
+      ${legacySelects.join(' UNION ')}
+    )
+    WHERE trim(user_name) != ''
+  `);
+
+  for (const row of distinct.rows) {
+    const name = String(row.name);
+    const existing = await database.execute({
+      sql: `SELECT id FROM users WHERE username = ? COLLATE NOCASE`,
+      args: [name],
+    });
+    if (existing.rows.length > 0) continue;
+
+    const passwordHash = await hashPassword(`legacy-migrate:${name}`);
+    await database.execute({
+      sql: `INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)`,
+      args: [name, passwordHash],
+    });
+  }
+}
+
+async function migrateMyDictionaryUserNameToUserId(database: Client): Promise<void> {
+  const dictExists = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'my_dictionary'`
+  );
+  if (dictExists.rows.length === 0) return;
+  if (!(await tableHasColumn(database, 'my_dictionary', 'user_name'))) return;
+
+  await ensureUsersForLegacyNames(database);
+
+  await database.batch(
+    [
+      {
+        sql: `
+          CREATE TABLE my_dictionary_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            type TEXT,
+            transcription TEXT,
+            meaning TEXT,
+            example TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'Mới' CHECK(status IN ('Mới', 'Đang học', 'Hoàn thành')),
+            created_date TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `,
+      },
+      {
+        sql: `
+          INSERT INTO my_dictionary_new (id, user_id, name, type, transcription, meaning, example, status, created_date)
+          SELECT d.id, u.id, d.name, d.type, d.transcription, d.meaning, d.example, d.status, d.created_date
+          FROM my_dictionary d
+          INNER JOIN users u ON u.username = d.user_name COLLATE NOCASE
+        `,
+      },
+      { sql: 'DROP TABLE my_dictionary' },
+      { sql: 'ALTER TABLE my_dictionary_new RENAME TO my_dictionary' },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_user ON my_dictionary(user_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_name ON my_dictionary(name)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_status ON my_dictionary(status)`,
+      },
+    ],
+    'write'
+  );
+}
+
+async function migrateStudyHistoryUserNameToUserId(database: Client): Promise<void> {
+  const historyExists = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'study_history'`
+  );
+  if (historyExists.rows.length === 0) return;
+  if (!(await tableHasColumn(database, 'study_history', 'user_name'))) return;
+
+  await ensureUsersForLegacyNames(database);
+
+  await database.batch(
+    [
+      {
+        sql: `
+          CREATE TABLE study_history_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dictionary_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            reviewed_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            next_review_date TEXT NOT NULL,
+            srs_level INTEGER NOT NULL DEFAULT 0,
+            result TEXT CHECK(result IN ('đang học', 'hoàn thành')),
+            FOREIGN KEY (dictionary_id) REFERENCES my_dictionary(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `,
+      },
+      {
+        sql: `
+          INSERT INTO study_history_new (id, dictionary_id, user_id, reviewed_at, next_review_date, srs_level, result)
+          SELECT sh.id, sh.dictionary_id, u.id, sh.reviewed_at, sh.next_review_date, sh.srs_level, sh.result
+          FROM study_history sh
+          INNER JOIN users u ON u.username = sh.user_name COLLATE NOCASE
+        `,
+      },
+      { sql: 'DROP TABLE study_history' },
+      { sql: 'ALTER TABLE study_history_new RENAME TO study_history' },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_dict ON study_history(dictionary_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_user ON study_history(user_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_next ON study_history(next_review_date)`,
+      },
+    ],
+    'write'
+  );
+}
+
+async function migrateUserNameToUserId(database: Client): Promise<void> {
+  await migrateMyDictionaryUserNameToUserId(database);
+  await migrateStudyHistoryUserNameToUserId(database);
 }
 
 async function migrateUsersTable(database: Client): Promise<void> {
@@ -107,57 +264,10 @@ async function migrateUsersTable(database: Client): Promise<void> {
 }
 
 async function initSchema(database: Client): Promise<void> {
-  await migrateDictionaryTable(database);
+  await renameDictionaryTableIfNeeded(database);
 
   await database.batch(
     [
-      {
-        sql: `
-          CREATE TABLE IF NOT EXISTS my_dictionary (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            name TEXT NOT NULL,
-            type TEXT,
-            transcription TEXT,
-            meaning TEXT,
-            example TEXT NOT NULL DEFAULT '[]',
-            status TEXT NOT NULL DEFAULT 'Mới' CHECK(status IN ('Mới', 'Đang học', 'Hoàn thành')),
-            created_date TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-          )
-        `,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_user ON my_dictionary(user_name)`,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_name ON my_dictionary(name)`,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_status ON my_dictionary(status)`,
-      },
-      {
-        sql: `
-          CREATE TABLE IF NOT EXISTS study_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            dictionary_id INTEGER NOT NULL,
-            user_name TEXT NOT NULL,
-            reviewed_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-            next_review_date TEXT NOT NULL,
-            srs_level INTEGER NOT NULL DEFAULT 0,
-            result TEXT CHECK(result IN ('đang học', 'hoàn thành')),
-            FOREIGN KEY (dictionary_id) REFERENCES my_dictionary(id) ON DELETE CASCADE
-          )
-        `,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_dict ON study_history(dictionary_id)`,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_user ON study_history(user_name)`,
-      },
-      {
-        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_next ON study_history(next_review_date)`,
-      },
       {
         sql: `
           CREATE TABLE IF NOT EXISTS users (
@@ -174,6 +284,55 @@ async function initSchema(database: Client): Promise<void> {
       },
       {
         sql: `
+          CREATE TABLE IF NOT EXISTS my_dictionary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            type TEXT,
+            transcription TEXT,
+            meaning TEXT,
+            example TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'Mới' CHECK(status IN ('Mới', 'Đang học', 'Hoàn thành')),
+            created_date TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_user ON my_dictionary(user_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_name ON my_dictionary(name)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_status ON my_dictionary(status)`,
+      },
+      {
+        sql: `
+          CREATE TABLE IF NOT EXISTS study_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dictionary_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            reviewed_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            next_review_date TEXT NOT NULL,
+            srs_level INTEGER NOT NULL DEFAULT 0,
+            result TEXT CHECK(result IN ('đang học', 'hoàn thành')),
+            FOREIGN KEY (dictionary_id) REFERENCES my_dictionary(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_dict ON study_history(dictionary_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_user ON study_history(user_id)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_study_history_next ON study_history(next_review_date)`,
+      },
+      {
+        sql: `
           CREATE TABLE IF NOT EXISTS participants (
             user_name TEXT PRIMARY KEY,
             last_seen_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -184,17 +343,19 @@ async function initSchema(database: Client): Promise<void> {
     'write'
   );
 
+  await migrateUserNameToUserId(database);
   await migrateUsersTable(database);
-
-  await database.execute(`
-    INSERT OR IGNORE INTO participants (user_name, last_seen_at)
-    SELECT user_name, MAX(reviewed_at)
-    FROM study_history
-    GROUP BY user_name
-  `);
 
   const { seedAdminUser } = await import('./services/userService.js');
   await seedAdminUser();
+
+  await database.execute(`
+    INSERT OR IGNORE INTO participants (user_name, last_seen_at)
+    SELECT u.username, MAX(sh.reviewed_at)
+    FROM study_history sh
+    INNER JOIN users u ON u.id = sh.user_id
+    GROUP BY u.id
+  `);
 }
 
 export async function queryAll<T>(
@@ -253,8 +414,10 @@ export function todayLocal(): string {
 
 export function mapDictionaryRow(row: DictionaryRow | undefined): DictionaryWord | null {
   if (!row) return null;
+  const { username, ...rest } = row;
   return {
-    ...row,
+    ...rest,
     example: parseExamples(row.example),
+    ...(username != null ? { username } : {}),
   };
 }
