@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import type { FlashcardWord } from '@/shared/types';
 import type { ReviewResult } from '@/shared/wordStatus';
 import { getFlashcards, submitFlashcardReview } from '@/api/client';
-import { getUserName } from '@/utils/storage';
 import { resetReminderAnchor } from '@/utils/studyReminder';
 import { AppLayout } from '@/components/layout/AppLayout';
 import WordHeader from '@/components/WordHeader';
@@ -39,7 +38,6 @@ function renderHighlightedSentence(sentence: string, keyword: string): ReactNode
 
 export default function FlashcardPage() {
   const navigate = useNavigate();
-  const userName = getUserName();
   const [cards, setCards] = useState<FlashcardWord[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -54,7 +52,7 @@ export default function FlashcardPage() {
     setError('');
     setBatchCompleted(false);
     try {
-      const data = await getFlashcards(userName);
+      const data = await getFlashcards();
       setCards(data);
       setIndex(0);
       setFlipped(false);
@@ -63,7 +61,7 @@ export default function FlashcardPage() {
     } finally {
       setLoading(false);
     }
-  }, [userName]);
+  }, []);
 
   useEffect(() => {
     void loadCards();
@@ -104,7 +102,6 @@ export default function FlashcardPage() {
     try {
       await submitFlashcardReview({
         dictionaryId: current.id,
-        userName,
         result,
       });
       if (index + 1 < cards.length) {

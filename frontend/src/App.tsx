@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import AddWordPage from './pages/AddWordPage';
@@ -57,7 +58,9 @@ export default function App() {
         path="/words"
         element={
           <ProtectedRoute>
-            <WordManagePage />
+            <AdminRoute>
+              <WordManagePage />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />
@@ -65,7 +68,9 @@ export default function App() {
         path="/settings-debug"
         element={
           <ProtectedRoute>
-            <SettingsDebugPage />
+            <AdminRoute>
+              <SettingsDebugPage />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />

@@ -2,7 +2,7 @@ import './loadEnv.js';
 import express from 'express';
 import cors, { type CorsOptions } from 'cors';
 import dictionaryRouter from './routes/dictionary.js';
-import participantsRouter from './routes/participants.js';
+import authRouter from './routes/auth.js';
 import translateRouter from './routes/translate.js';
 import { initDb } from './db.js';
 import { renderSwaggerUiPage, swaggerSpec } from './swagger.js';
@@ -27,6 +27,7 @@ const corsOptions: CorsOptions = {
     }
     callback(null, false);
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
@@ -68,7 +69,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/dictionary', dictionaryRouter);
-app.use('/api/participants', participantsRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/translate', translateRouter);
 
 if (!process.env.VERCEL) {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Users } from 'lucide-react';
 import type { DashboardResponse, ParticipantStats } from '@/shared/types';
 import { getDashboard } from '@/api/client';
-import { getUserName } from '@/utils/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,17 +35,17 @@ function summarizeVsMe(me: ParticipantStats, other: ParticipantStats): string {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const userName = getUserName();
+  const { userName } = useAuth();
   const [stats, setStats] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getDashboard(userName)
+    getDashboard()
       .then(setStats)
       .catch((err) => setError(err instanceof Error ? err.message : 'Lỗi'))
       .finally(() => setLoading(false));
-  }, [userName]);
+  }, []);
 
   const others = stats?.participants.filter((p) => p.userName !== userName) ?? [];
   const me = stats?.me;

@@ -10,7 +10,7 @@ import {
   Search,
   Settings,
 } from 'lucide-react';
-import { getUserName, clearUserName } from '@/utils/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getReminderStatus,
   notifyDueReminder,
@@ -23,17 +23,22 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { cn } from '@/lib/utils';
 
 const menuItems = [
-  { path: '/add', label: 'Thêm từ mới', desc: 'Bổ sung từ vào từ điển', icon: PlusCircle },
-  { path: '/flashcard', label: 'Ôn tập flashcard', desc: 'SRS — 5 thẻ mỗi lượt', icon: Layers },
-  { path: '/search', label: 'Tìm kiếm', desc: 'Tra cứu theo tên từ', icon: Search },
-  { path: '/dashboard', label: 'Dashboard', desc: 'Tiến độ & so sánh', icon: LineChart },
-  { path: '/words', label: 'Quản lý từ vựng', desc: 'CRUD & phân trang', icon: BookMarked },
+  { path: '/add', label: 'Thêm từ mới', desc: 'Bổ sung từ vào từ điển', icon: PlusCircle, adminOnly: false },
+  { path: '/flashcard', label: 'Ôn tập flashcard', desc: 'SRS — 5 thẻ mỗi lượt', icon: Layers, adminOnly: false },
+  { path: '/search', label: 'Tìm kiếm', desc: 'Tra cứu theo tên từ', icon: Search, adminOnly: false },
+  { path: '/dashboard', label: 'Dashboard', desc: 'Tiến độ & so sánh', icon: LineChart, adminOnly: false },
+  {
+    path: '/words',
+    label: 'Quản lý từ vựng',
+    desc: 'Toàn bộ từ vựng (admin)',
+    icon: BookMarked,
+    adminOnly: true,
+  },
 ] as const;
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const userName = getUserName();
-  const isThaoUser = userName === 'Thảo';
+  const { userName, isAdmin, logout } = useAuth();
   const [dueNow, setDueNow] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
     typeof window !== 'undefined' && 'Notification' in window
@@ -42,8 +47,8 @@ export default function HomePage() {
   );
   const [nextOffset, setNextOffset] = useState<number | null>(null);
 
-  function handleLogout() {
-    clearUserName();
+  async function handleLogout() {
+    await logout();
     navigate('/login');
   }
 
@@ -56,7 +61,7 @@ export default function HomePage() {
       setDueNow(status.dueNow);
       setNextOffset(status.nextOffsetMinutes);
       if (status.enabled && Notification.permission === 'granted') {
-        await notifyDueReminder(userName);
+        await notifyDueReminder(userName ?? '');
       }
     }
 
@@ -82,14 +87,16 @@ export default function HomePage() {
     setPermission(result);
   }
 
+  const visibleMenuItems = menuItems.filter((item) => !item.adminOnly || isAdmin);
+
   return (
     <AppLayout
       title="Trang chủ"
       subtitle={`Xin chào, ${userName}!`}
       footer={
-        <Button variant="outline" className="w-full" onClick={handleLogout}>
+        <Button variant="outline" className="w-full" onClick={() => void handleLogout()}>
           <LogOut className="size-4" />
-          Đổi tên / Đăng xuất
+          Đăng xuất
         </Button>
       }
     >
@@ -100,8 +107,7 @@ export default function HomePage() {
         </Button>
       )}
       <div className="grid gap-3">
-        {menuItems.map(({ path, label, desc, icon: Icon }) => (
-          (path !== '/words' || isThaoUser) && (
+        {visibleMenuItems.map(({ path, label, desc, icon: Icon }) => (
           <Card
             key={path}
             className={cn(
@@ -127,9 +133,8 @@ export default function HomePage() {
               </div>
             </CardHeader>
           </Card>
-          )
         ))}
-        {import.meta.env.DEV && isThaoUser && (
+        {isAdmin && (
           <Card
             className="cursor-pointer py-4 transition-colors hover:bg-accent/50"
             onClick={() => navigate('/settings-debug')}
@@ -139,8 +144,8 @@ export default function HomePage() {
                 <Settings className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-base">Settings Debug</CardTitle>
-                <CardDescription>Debug notification mốc ôn tập</CardDescription>
+                <CardTitle className="text-base">Quản lý notification</CardTitle>
+                <CardDescription>Debug mốc nhắc ôn tập (admin)</CardDescription>
               </div>
             </CardHeader>
           </Card>

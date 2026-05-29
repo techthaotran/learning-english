@@ -28,6 +28,8 @@ import {
 } from '../db.js';
 import { getAllParticipantStats, upsertParticipant } from './participantService.js';
 
+const DEFAULT_USER_NAME = 'guest';
+
 /** Words eligible for SRS: all "Mới", or "Đang học" whose next review is today or earlier. */
 const FLASHCARD_DUE_SQL = `
   d.status = ?
@@ -49,6 +51,11 @@ const FLASHCARD_DUE_SQL = `
   )
 `;
 
+function normalizeUserName(userName?: string): string {
+  const trimmed = userName?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : DEFAULT_USER_NAME;
+}
+
 function normalizeExamples(example: CreateWordPayload['example']): DictionaryWord['example'] {
   if (Array.isArray(example)) return example;
   if (typeof example === 'string') {
@@ -62,12 +69,17 @@ function normalizeExamples(example: CreateWordPayload['example']): DictionaryWor
   return [];
 }
 
-export async function createWord(payload: CreateWordPayload): Promise<DictionaryWord | null> {
+export async function createWord(
+  userName: string,
+  payload: CreateWordPayload
+): Promise<DictionaryWord | null> {
+  const owner = normalizeUserName(userName);
   const examples = normalizeExamples(payload.example);
   const result = await run(
-    `INSERT INTO dictionary (name, type, transcription, meaning, example, status)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO my_dictionary (user_name, name, type, transcription, meaning, example, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
+      owner,
       payload.name.trim(),
       payload.type?.trim() || '',
       payload.transcription?.trim() || '',
@@ -76,15 +88,26 @@ export async function createWord(payload: CreateWordPayload): Promise<Dictionary
       STATUS.NEW,
     ]
   );
-  return getWordById(result.lastInsertRowid);
+  return getWordById(result.lastInsertRowid, owner);
 }
 
-export async function getWordById(id: number): Promise<DictionaryWord | null> {
-  const row = await queryOne<DictionaryRow>('SELECT * FROM dictionary WHERE id = ?', [id]);
+export async function getWordById(
+  id: number,
+  userName?: string
+): Promise<DictionaryWord | null> {
+  const owner = userName != null ? normalizeUserName(userName) : null;
+  const row = owner
+    ? await queryOne<DictionaryRow>(
+        'SELECT * FROM my_dictionary WHERE id = ? AND user_name = ?',
+        [id, owner]
+      )
+    : await queryOne<DictionaryRow>('SELECT * FROM my_dictionary WHERE id = ?', [id]);
   return mapDictionaryRow(row);
 }
 
 export interface ListWordsParams {
+  userName?: string;
+  allUsers?: boolean;
   keyword?: string;
   status?: string;
   emptyExample?: boolean;
@@ -93,6 +116,8 @@ export interface ListWordsParams {
 }
 
 export async function listWords({
+  userName,
+  allUsers = false,
   keyword,
   status,
   emptyExample,
@@ -103,8 +128,8 @@ export async function listWords({
   const safePageSize = Math.min(Math.max(1, pageSize), MAX_PAGE_SIZE);
   const offset = (safePage - 1) * safePageSize;
 
-  let where = 'WHERE 1=1';
-  const params: (string | WordStatus)[] = [];
+  let where = allUsers ? 'WHERE 1=1' : 'WHERE user_name = ?';
+  const params: (string | WordStatus)[] = allUsers ? [] : [normalizeUserName(userName)];
 
   if (keyword?.trim()) {
     where += ' AND name LIKE ? COLLATE NOCASE';
@@ -115,18 +140,19 @@ export async function listWords({
     params.push(status);
   }
   if (emptyExample) {
-    where += " AND (example = '[]' OR trim(example) = '' OR json_array_length(example) = 0)";
+    where +=
+      " AND (example = '[]' OR trim(example) = '' OR json_array_length(example) = 0)";
   }
 
   const countRow = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) as count FROM dictionary ${where}`,
+    `SELECT COUNT(*) as count FROM my_dictionary ${where}`,
     params
   );
   const total = countRow?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / safePageSize));
 
   const rows = await queryAll<DictionaryRow>(
-    `SELECT * FROM dictionary ${where}
+    `SELECT * FROM my_dictionary ${where}
      ORDER BY created_date DESC
      LIMIT ? OFFSET ?`,
     [...params, safePageSize, offset]
@@ -143,9 +169,13 @@ export async function listWords({
 
 export async function updateWord(
   id: number,
-  payload: UpdateWordPayload
+  payload: UpdateWordPayload,
+  userName?: string,
+  asAdmin = false
 ): Promise<DictionaryWord | null> {
-  const existing = await getWordById(id);
+  const existing = asAdmin
+    ? await getWordById(id)
+    : await getWordById(id, normalizeUserName(userName));
   if (!existing) return null;
 
   const name = payload.name?.trim() ?? existing.name;
@@ -167,52 +197,95 @@ export async function updateWord(
     throw new Error('Tên từ không được để trống');
   }
 
+  if (asAdmin) {
+    await run(
+      `UPDATE my_dictionary
+       SET name = ?, type = ?, transcription = ?, meaning = ?, example = ?, status = ?
+       WHERE id = ?`,
+      [name, type, transcription, meaning, example, status, id]
+    );
+    return getWordById(id);
+  }
+
+  const owner = normalizeUserName(userName);
   await run(
-    `UPDATE dictionary
+    `UPDATE my_dictionary
      SET name = ?, type = ?, transcription = ?, meaning = ?, example = ?, status = ?
-     WHERE id = ?`,
-    [name, type, transcription, meaning, example, status, id]
+     WHERE id = ? AND user_name = ?`,
+    [name, type, transcription, meaning, example, status, id, owner]
   );
 
-  return getWordById(id);
+  return getWordById(id, owner);
 }
 
-export async function deleteWord(id: number): Promise<boolean> {
-  const existing = await getWordById(id);
+export async function deleteWord(
+  id: number,
+  userName?: string,
+  asAdmin = false
+): Promise<boolean> {
+  const existing = asAdmin
+    ? await getWordById(id)
+    : await getWordById(id, normalizeUserName(userName));
   if (!existing) return false;
-  await run('DELETE FROM dictionary WHERE id = ?', [id]);
+
+  if (asAdmin) {
+    await run('DELETE FROM my_dictionary WHERE id = ?', [id]);
+  } else {
+    const owner = normalizeUserName(userName);
+    await run('DELETE FROM my_dictionary WHERE id = ? AND user_name = ?', [id, owner]);
+  }
   return true;
 }
 
-export async function searchWords(keyword: string): Promise<DictionaryWord[]> {
+export async function searchWords(
+  keyword: string,
+  userName?: string
+): Promise<DictionaryWord[]> {
+  const owner = normalizeUserName(userName);
   const q = `%${keyword.trim()}%`;
   const rows = await queryAll<DictionaryRow>(
-    `SELECT * FROM dictionary
-     WHERE name LIKE ? COLLATE NOCASE
+    `SELECT * FROM my_dictionary
+     WHERE user_name = ? AND name LIKE ? COLLATE NOCASE
      ORDER BY created_date DESC`,
-    [q]
+    [owner, q]
   );
   return rows.map((row) => mapDictionaryRow(row)!);
 }
 
 export async function getDashboardStats(userName?: string): Promise<DashboardResponse> {
+  const owner = userName?.trim() ? userName.trim() : null;
+  const userFilter = owner ? 'WHERE user_name = ?' : '';
+  const userParams = owner ? [owner] : [];
+
   const byStatus = await queryAll<{ status: WordStatus; count: number }>(
-    `SELECT status, COUNT(*) as count FROM dictionary GROUP BY status`
+    `SELECT status, COUNT(*) as count FROM my_dictionary ${userFilter} GROUP BY status`,
+    userParams
   );
-  const total = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM dictionary');
+  const total = await queryOne<{ count: number }>(
+    `SELECT COUNT(*) as count FROM my_dictionary ${userFilter}`,
+    userParams
+  );
   const recent = await queryAll<DictionaryRow>(
-    `SELECT * FROM dictionary ORDER BY created_date DESC LIMIT 5`
+    `SELECT * FROM my_dictionary ${userFilter} ORDER BY created_date DESC LIMIT 5`,
+    userParams
   );
   const studyToday = await queryOne<{ count: number }>(
     `SELECT COUNT(DISTINCT dictionary_id) as count
      FROM study_history
      WHERE date(reviewed_at) = date('now', 'localtime')`
   );
+  const dueParams = owner
+    ? [owner, STATUS.NEW, STATUS.LEARNING]
+    : [STATUS.NEW, STATUS.LEARNING];
   const dueForReview = await queryOne<{ count: number }>(
-    `SELECT COUNT(DISTINCT d.id) as count
-     FROM dictionary d
-     WHERE ${FLASHCARD_DUE_SQL}`,
-    [STATUS.NEW, STATUS.LEARNING]
+    owner
+      ? `SELECT COUNT(DISTINCT d.id) as count
+         FROM my_dictionary d
+         WHERE d.user_name = ? AND (${FLASHCARD_DUE_SQL})`
+      : `SELECT COUNT(DISTINCT d.id) as count
+         FROM my_dictionary d
+         WHERE ${FLASHCARD_DUE_SQL}`,
+    dueParams
   );
 
   const statusMap: StatusCounts = {
@@ -252,13 +325,13 @@ export async function getFlashcardBatch(
   userName: string,
   limit = 10
 ): Promise<FlashcardWord[]> {
-  void userName;
+  const owner = normalizeUserName(userName);
   const rows = await queryAll<DictionaryRow>(
-    `SELECT * FROM dictionary d
-     WHERE ${FLASHCARD_DUE_SQL}
+    `SELECT * FROM my_dictionary d
+     WHERE d.user_name = ? AND (${FLASHCARD_DUE_SQL})
      ORDER BY RANDOM()
      LIMIT ?`,
-    [STATUS.NEW, STATUS.LEARNING, limit]
+    [owner, STATUS.NEW, STATUS.LEARNING, limit]
   );
 
   return Promise.all(
@@ -304,9 +377,10 @@ export async function recordFlashcardReview({
   userName: string;
   result: ReviewResult;
 }): Promise<DictionaryWord | null> {
-  await upsertParticipant(userName);
+  const owner = normalizeUserName(userName);
+  await upsertParticipant(owner);
 
-  const word = await getWordById(dictionaryId);
+  const word = await getWordById(dictionaryId, owner);
   if (!word) return null;
 
   const latest = await queryOne<{ srs_level: number }>(
@@ -329,7 +403,11 @@ export async function recordFlashcardReview({
   const newStatus =
     result === 'hoàn thành' ? STATUS.COMPLETED : STATUS.LEARNING;
 
-  await run(`UPDATE dictionary SET status = ? WHERE id = ?`, [newStatus, dictionaryId]);
+  await run(`UPDATE my_dictionary SET status = ? WHERE id = ? AND user_name = ?`, [
+    newStatus,
+    dictionaryId,
+    owner,
+  ]);
 
   if (word.status === STATUS.NEW && newStatus === STATUS.LEARNING) {
     srsLevel = 0;
@@ -338,8 +416,8 @@ export async function recordFlashcardReview({
   await run(
     `INSERT INTO study_history (dictionary_id, user_name, next_review_date, srs_level, result)
      VALUES (?, ?, ?, ?, ?)`,
-    [dictionaryId, userName, nextReview, srsLevel, result]
+    [dictionaryId, owner, nextReview, srsLevel, result]
   );
 
-  return getWordById(dictionaryId);
+  return getWordById(dictionaryId, owner);
 }

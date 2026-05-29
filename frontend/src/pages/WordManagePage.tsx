@@ -195,6 +195,7 @@ export default function WordManagePage() {
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge status={word.status} />
+                    <span className="text-muted-foreground text-xs">{word.user_name}</span>
                     <span className="text-muted-foreground text-xs">{word.created_date}</span>
                   </div>
                 </div>

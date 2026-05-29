@@ -10,6 +10,7 @@ let initPromise: Promise<void> | undefined;
 
 export interface DictionaryRow {
   id: number;
+  user_name: string;
   name: string;
   type: string;
   transcription: string;
@@ -67,13 +68,54 @@ export async function initDb(): Promise<void> {
   return initPromise;
 }
 
+async function migrateDictionaryTable(database: Client): Promise<void> {
+  const tables = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('dictionary', 'my_dictionary')`
+  );
+  const tableNames = tables.rows.map((row) => String(row.name));
+
+  if (tableNames.includes('dictionary') && !tableNames.includes('my_dictionary')) {
+    await database.execute('ALTER TABLE dictionary RENAME TO my_dictionary');
+  }
+
+  if (!tableNames.includes('dictionary') && !tableNames.includes('my_dictionary')) {
+    return;
+  }
+
+  const columns = await database.execute('PRAGMA table_info(my_dictionary)');
+  const hasUserName = columns.rows.some((row) => String(row.name) === 'user_name');
+  if (!hasUserName) {
+    await database.execute(
+      `ALTER TABLE my_dictionary ADD COLUMN user_name TEXT NOT NULL DEFAULT 'guest'`
+    );
+  }
+}
+
+async function migrateUsersTable(database: Client): Promise<void> {
+  const tables = await database.execute(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'`
+  );
+  if (tables.rows.length === 0) return;
+
+  const columns = await database.execute('PRAGMA table_info(users)');
+  const hasIsAdmin = columns.rows.some((row) => String(row.name) === 'is_admin');
+  if (!hasIsAdmin) {
+    await database.execute(
+      `ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0`
+    );
+  }
+}
+
 async function initSchema(database: Client): Promise<void> {
+  await migrateDictionaryTable(database);
+
   await database.batch(
     [
       {
         sql: `
-          CREATE TABLE IF NOT EXISTS dictionary (
+          CREATE TABLE IF NOT EXISTS my_dictionary (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT NOT NULL,
             name TEXT NOT NULL,
             type TEXT,
             transcription TEXT,
@@ -85,10 +127,13 @@ async function initSchema(database: Client): Promise<void> {
         `,
       },
       {
-        sql: `CREATE INDEX IF NOT EXISTS idx_dictionary_name ON dictionary(name)`,
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_user ON my_dictionary(user_name)`,
       },
       {
-        sql: `CREATE INDEX IF NOT EXISTS idx_dictionary_status ON dictionary(status)`,
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_name ON my_dictionary(name)`,
+      },
+      {
+        sql: `CREATE INDEX IF NOT EXISTS idx_my_dictionary_status ON my_dictionary(status)`,
       },
       {
         sql: `
@@ -100,7 +145,7 @@ async function initSchema(database: Client): Promise<void> {
             next_review_date TEXT NOT NULL,
             srs_level INTEGER NOT NULL DEFAULT 0,
             result TEXT CHECK(result IN ('đang học', 'hoàn thành')),
-            FOREIGN KEY (dictionary_id) REFERENCES dictionary(id) ON DELETE CASCADE
+            FOREIGN KEY (dictionary_id) REFERENCES my_dictionary(id) ON DELETE CASCADE
           )
         `,
       },
@@ -115,6 +160,20 @@ async function initSchema(database: Client): Promise<void> {
       },
       {
         sql: `
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            password_hash TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+          )
+        `,
+      },
+      {
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username COLLATE NOCASE)`,
+      },
+      {
+        sql: `
           CREATE TABLE IF NOT EXISTS participants (
             user_name TEXT PRIMARY KEY,
             last_seen_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -125,12 +184,17 @@ async function initSchema(database: Client): Promise<void> {
     'write'
   );
 
+  await migrateUsersTable(database);
+
   await database.execute(`
     INSERT OR IGNORE INTO participants (user_name, last_seen_at)
     SELECT user_name, MAX(reviewed_at)
     FROM study_history
     GROUP BY user_name
   `);
+
+  const { seedAdminUser } = await import('./services/userService.js');
+  await seedAdminUser();
 }
 
 export async function queryAll<T>(
