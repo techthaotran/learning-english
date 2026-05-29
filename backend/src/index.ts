@@ -1,6 +1,6 @@
 import './loadEnv.js';
 import express from 'express';
-import cors from 'cors';
+import cors, { type CorsOptions } from 'cors';
 import dictionaryRouter from './routes/dictionary.js';
 import participantsRouter from './routes/participants.js';
 import translateRouter from './routes/translate.js';
@@ -10,9 +10,38 @@ import { renderSwaggerUiPage, swaggerSpec } from './swagger.js';
 const app = express();
 const PORT = process.env.PORT || 4002;
 
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:4001',
+  'https://fcard-gui.vercel.app',
+]);
+
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (ALLOWED_ORIGINS.has(origin)) {
+      callback(null, origin);
+      return;
+    }
+    callback(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.set('trust proxy', 1);
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
 const dbReady = initDb();
 
-app.use(async (_req, _res, next) => {
+app.use(async (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    next();
+    return;
+  }
   try {
     await dbReady;
     next();
@@ -21,24 +50,6 @@ app.use(async (_req, _res, next) => {
   }
 });
 
-app.set('trust proxy', 1);
-
-const ALLOWED_ORIGINS = new Set([
-  'http://localhost:4001',
-  'https://fcard-gui.vercel.app',
-]);
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || ALLOWED_ORIGINS.has(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error('Not allowed by CORS'));
-    },
-  })
-);
 app.use(express.json());
 
 app.get('/api/docs.json', (req, res) => {
