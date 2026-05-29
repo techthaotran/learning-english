@@ -32,6 +32,6 @@ logStep(`Node=${process.version}`);
 logStep(`Vercel env=${process.env.VERCEL_ENV ?? 'unknown'}`);
 logStep(`Git commit=${process.env.VERCEL_GIT_COMMIT_SHA ?? 'unknown'}`);
 
-run('pnpm', ['-C', 'backend', 'build']);
+run('pnpm', ['-C', 'backend', 'check']);
 
 logStep('Build script finished successfully');

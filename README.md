@@ -106,3 +106,17 @@ Hiện tại code đã hỗ trợ:
   - `backend/.env.production` -> `PORT=4002`, `DB_PATH=/var/data/learning.db`
 
 Backend đã load env bằng `dotenv` từ `backend/src/index.ts`.
+
+### Deploy API lên Vercel (Express zero-config)
+
+Trong **Project Settings → Build and Deployment** (không dùng `builds` legacy trong `vercel.json`):
+
+| Mục | Giá trị |
+|-----|---------|
+| Root Directory | `backend` |
+| Framework Preset | Express |
+| Build Command | `pnpm build` (chạy `tsc`) |
+| Output Directory | *(để trống — Express preset tự xử lý)* |
+| Install Command | `pnpm install` (hoặc để Vercel auto-detect) |
+
+Entry: `src/index.ts` export `default app`. Runtime dùng `src/index.ts`; `pnpm start` (`node dist/index.js`) chỉ cho chạy local / host có Node thường.
